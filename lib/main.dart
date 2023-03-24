@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'dart:math' show asin, cos, pi, pow, sin, sqrt;
 
 void main() => runApp(
       MaterialApp(home: Position()),
