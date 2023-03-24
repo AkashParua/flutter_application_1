@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
-import 'package:http/http.dart' as http;
 import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:math' show asin, cos, pi, pow, sin, sqrt;
 
 void main() => runApp(
       MaterialApp(home: Position()),
@@ -16,20 +16,24 @@ class Position extends StatefulWidget {
 class _PositionState extends State<Position> {
   double _latitude = 0.0;
   double _longitude = 0.0;
-  double _acc_x = 0.0;
-  double _acc_y = 0.0;
-  double _acc_z = 0.0;
-  double _gy_x = 0.0;
-  double _gy_y = 0.0;
-  double _gy_z = 0.0;
+  double _accx = 0.0;
+  double _accy = 0.0;
+  double _accz = 0.0;
+  double _gyx = 0.0;
+  double _gyy = 0.0;
+  double _gyz = 0.0;
+  double _speed = 0;
+  var clock = DateTime.now();
   Location _location = Location();
   late StreamSubscription<LocationData> _locationSubscription;
   @override
   void initState() {
     super.initState();
+
     _locationSubscription =
         _location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
+        _speed = currentLocation.speed!;
         _latitude = currentLocation.latitude!;
         _longitude = currentLocation.longitude!;
       });
@@ -37,18 +41,18 @@ class _PositionState extends State<Position> {
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
     userAccelerometerEvents.listen((UserAccelerometerEvent event) {
       setState(() {
-        _acc_x = event.x;
-        _acc_y = event.y;
-        _acc_z = event.z;
+        _accx = event.x;
+        _accy = event.y;
+        _accz = event.z;
       });
     });
 
     // [GyroscopeEvent (x: 0.0, y: 0.0, z: 0.0)]
     gyroscopeEvents.listen((GyroscopeEvent event) {
       setState(() {
-        _gy_x = event.x;
-        _gy_y = event.y;
-        _gy_z = event.z;
+        _gyx = event.x;
+        _gyy = event.y;
+        _gyz = event.z;
       });
     });
   }
@@ -59,7 +63,7 @@ class _PositionState extends State<Position> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.grey,
           title: const Text(
             'VANET INTERFACE',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -73,71 +77,80 @@ class _PositionState extends State<Position> {
             const Center(
               child: Text(
                 'Location',
-                style: TextStyle(fontSize: 20, color: Colors.deepPurple),
+                style: TextStyle(fontSize: 20, color: Colors.black),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
+              color: Colors.grey,
               child: Text('Latitude: $_latitude', style: style1),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
+              color: Colors.grey,
               child: Text(
                 'Longitude: $_longitude',
+                style: style1,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.all(10),
+              color: Colors.grey,
+              child: Text(
+                'Speed: $_speed',
                 style: style1,
               ),
             ),
             const Center(
               child: Text(
                 'Accelerometer',
-                style: TextStyle(fontSize: 20, color: Colors.deepOrange),
+                style: TextStyle(fontSize: 20, color: Colors.black),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Acc. X-axis $_acc_x', style: style1),
+              color: Colors.grey,
+              child: Text('Acc. X-axis $_accx', style: style1),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Acc. Y-axis $_acc_y', style: style1),
+              color: Colors.grey,
+              child: Text('Acc. Y-axis $_accy', style: style1),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Acc. Z-axis $_acc_z', style: style1),
+              color: Colors.grey,
+              child: Text('Acc. Z-axis $_accz', style: style1),
             ),
             const Center(
               child: Text(
                 'Gyroscope',
-                style: TextStyle(fontSize: 20, color: Colors.amberAccent),
+                style: TextStyle(fontSize: 20, color: Colors.black),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Gyro. X-axis $_gy_x', style: style1),
+              color: Colors.grey,
+              child: Text('Gyro. X-axis $_gyx', style: style1),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Gyro. Y-axis $_gy_y', style: style1),
+              color: Colors.grey,
+              child: Text('Gyro. Y-axis $_gyy', style: style1),
             ),
             Container(
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text('Gyro. Z-axis $_gy_z', style: style1),
+              color: Colors.grey,
+              child: Text('Gyro. Z-axis $_gyz', style: style1),
             ),
           ],
         )));
