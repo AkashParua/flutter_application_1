@@ -1,13 +1,27 @@
 import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+// ignore: depend_on_referenced_packages
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:geoflutterfire/geoflutterfire.dart';
+import 'package:device_info/device_info.dart';
+import 'dart:io';
 
-void main() => runApp(
-      MaterialApp(home: Position()),
-    );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(
+    const MaterialApp(home: Position()),
+  );
+}
 
 class Position extends StatefulWidget {
+  const Position({super.key});
   @override
   State<Position> createState() => _PositionState();
 }
@@ -21,37 +35,75 @@ class _PositionState extends State<Position> {
   double _gyx = 0.0;
   double _gyy = 0.0;
   double _gyz = 0.0;
-  double _speed = 0;
-  var clock = DateTime.now();
-  Location _location = Location();
+  double _speed = 0.0;
+  String _deviceId = "";
+  final Location _location = Location();
+  final _geo = Geoflutterfire();
   late StreamSubscription<LocationData> _locationSubscription;
+
+  final _onroad = FirebaseDatabase.instance.ref().child('onroad');
+
+  void sendLocation(
+      String deviceId, double longitude, double latitude, double speed) {
+    final geofirepoint = _geo.point(latitude: latitude, longitude: longitude);
+    _onroad.child(deviceId).set({
+      'latitude': latitude,
+      'longitude': longitude,
+      'speed': speed,
+      'hash': geofirepoint.hash,
+    });
+  }
+
+  void erase(String deviceId) {
+    _onroad.child(deviceId).remove();
+  }
+
+  void getDeviceId() async {
+    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+
+      setState(() {
+        _deviceId = androidInfo.androidId;
+      });
+    } else if (Platform.isIOS) {
+      final IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+      setState(() {
+        _deviceId = iosInfo.identifierForVendor;
+      });
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-
+    getDeviceId();
     _locationSubscription =
         _location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
-        _speed = currentLocation.speed!;
-        _latitude = currentLocation.latitude!;
-        _longitude = currentLocation.longitude!;
+        _speed = double.parse(currentLocation.speed!.toStringAsFixed(3));
+        _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(4));
+        _longitude =
+            double.parse(currentLocation.longitude!.toStringAsFixed(4));
+        sendLocation(_deviceId, _longitude, _latitude, _speed);
       });
     });
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
     userAccelerometerEvents.listen((UserAccelerometerEvent event) {
       setState(() {
-        _accx = event.x;
-        _accy = event.y;
-        _accz = event.z;
+        _accx = double.parse(event.x.toStringAsFixed(3));
+        _accy = double.parse(event.x.toStringAsFixed(3));
+        _accz = double.parse(event.x.toStringAsFixed(3));
       });
     });
 
     // [GyroscopeEvent (x: 0.0, y: 0.0, z: 0.0)]
     gyroscopeEvents.listen((GyroscopeEvent event) {
       setState(() {
-        _gyx = event.x;
-        _gyy = event.y;
-        _gyz = event.z;
+        _gyx = double.parse(event.x.toStringAsFixed(3));
+        _gyy = double.parse(event.x.toStringAsFixed(3));
+        _gyz = double.parse(event.x.toStringAsFixed(3));
       });
     });
   }
@@ -62,10 +114,19 @@ class _PositionState extends State<Position> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+            ),
+            onPressed: () {
+              erase(_deviceId);
+              Navigator.pop(context);
+            },
+          ),
           backgroundColor: Colors.grey,
-          title: const Text(
-            'VANET INTERFACE',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          title: Text(
+            'VANET INTERFACE $_deviceId',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
         body: SingleChildScrollView(
