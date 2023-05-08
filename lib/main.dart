@@ -55,18 +55,18 @@ class _PositionState extends State<Position> {
   final _onroad = FirebaseDatabase.instance.ref().child('onroad');
 
   void sendLocation(String deviceId, double longitude, double latitude,
-      double speed, String type) {
+      double speed, String type) async {
     final geofirepoint = _geo.point(latitude: latitude, longitude: longitude);
     _onroad.child(deviceId).set({
       'latitude': latitude,
       'longitude': longitude,
       'speed': speed,
-      'hash': geofirepoint.hash,
+      'position': geofirepoint.data,
       'type': type,
     });
   }
 
-  void erase(String deviceId) {
+  void erase(String deviceId) async {
     _onroad.child(deviceId).remove();
   }
 
@@ -98,8 +98,8 @@ class _PositionState extends State<Position> {
         _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(4));
         _longitude =
             double.parse(currentLocation.longitude!.toStringAsFixed(4));
-        sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
       });
+      sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
     });
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
     userAccelerometerEvents.listen((UserAccelerometerEvent event) {
@@ -248,7 +248,7 @@ class _PositionState extends State<Position> {
                   child: Text(value),
                 );
               }).toList(),
-            )
+            ),
           ],
         )));
   }
