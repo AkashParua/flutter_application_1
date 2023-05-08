@@ -37,20 +37,32 @@ class _PositionState extends State<Position> {
   double _gyz = 0.0;
   double _speed = 0.0;
   String _deviceId = "";
+
+  List<String> list = <String>[
+    'Car',
+    'Truck',
+    'Motorcycle',
+    'Ambulance',
+    'Firetruck',
+    'Police'
+  ];
+  String _vehicletype = 'Car';
+
   final Location _location = Location();
   final _geo = Geoflutterfire();
   late StreamSubscription<LocationData> _locationSubscription;
 
   final _onroad = FirebaseDatabase.instance.ref().child('onroad');
 
-  void sendLocation(
-      String deviceId, double longitude, double latitude, double speed) {
+  void sendLocation(String deviceId, double longitude, double latitude,
+      double speed, String type) {
     final geofirepoint = _geo.point(latitude: latitude, longitude: longitude);
     _onroad.child(deviceId).set({
       'latitude': latitude,
       'longitude': longitude,
       'speed': speed,
       'hash': geofirepoint.hash,
+      'type': type,
     });
   }
 
@@ -86,7 +98,7 @@ class _PositionState extends State<Position> {
         _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(4));
         _longitude =
             double.parse(currentLocation.longitude!.toStringAsFixed(4));
-        sendLocation(_deviceId, _longitude, _latitude, _speed);
+        sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
       });
     });
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
@@ -212,6 +224,31 @@ class _PositionState extends State<Position> {
               color: Colors.grey,
               child: Text('Gyro. Z-axis $_gyz', style: style1),
             ),
+            /////////
+            DropdownButton<String>(
+              value: _vehicletype,
+              icon: const Icon(Icons.arrow_downward),
+              elevation: 16,
+              style: const TextStyle(
+                color: Colors.deepPurple,
+              ),
+              underline: Container(
+                height: 2,
+                color: Colors.deepPurpleAccent,
+              ),
+              onChanged: (String? value) {
+                _onroad.child(_deviceId).set({'type': _vehicletype});
+                setState(() {
+                  _vehicletype = value!;
+                });
+              },
+              items: list.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            )
           ],
         )));
   }
