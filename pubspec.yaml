@@ -41,9 +41,11 @@ dependencies:
   device_info_plus: ^8.1.0
   geoflutterfire: ^3.0.2
   device_info: ^2.0.3
-  google_maps_flutter: ^2.2.5
+  google_maps_flutter: ^2.2.6
   firebase_core_platform_interface: 4.5.1
   firebase_messaging: ^13.0.4
+  cloud_firestore: ^3.5.1
+  rxdart: ^0.27.7
   
 
 dev_dependencies:

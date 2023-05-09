@@ -1,8 +1,12 @@
 import 'dart:async';
+//import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+// ignore: depend_on_referenced_packages
+//import 'package:rxdart/rxdart.dart';
+//import 'package:cloud_firestore/cloud_firestore.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -37,38 +41,32 @@ class _PositionState extends State<Position> {
   double _gyz = 0.0;
   double _speed = 0.0;
   String _deviceId = "";
-
-  List<String> list = <String>[
-    'Car',
-    'Truck',
-    'Motorcycle',
-    'Ambulance',
-    'Firetruck',
-    'Police'
-  ];
-  String _vehicletype = 'Car';
-
   final Location _location = Location();
   final _geo = Geoflutterfire();
   late StreamSubscription<LocationData> _locationSubscription;
-
+  // final _fstore = FirebaseFirestore.instance.collection('locations');
   final _onroad = FirebaseDatabase.instance.ref().child('onroad');
 
   void sendLocation(String deviceId, double longitude, double latitude,
       double speed, String type) async {
     final geofirepoint = _geo.point(latitude: latitude, longitude: longitude);
+    // _fstore.add({'deviceid': deviceId, 'position': geofirepoint.data});
     _onroad.child(deviceId).set({
       'latitude': latitude,
       'longitude': longitude,
       'speed': speed,
-      'position': geofirepoint.data,
       'type': type,
+      'hash': geofirepoint.hash
     });
   }
 
+  List<String> list = <String>['Car', 'Truck', 'Medical', 'Motorcycle'];
+  String _vehicletype = 'Car';
   void erase(String deviceId) async {
     _onroad.child(deviceId).remove();
   }
+
+  List<Map<String, dynamic>> onRoadVehicles = [];
 
   void getDeviceId() async {
     final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
@@ -98,9 +96,24 @@ class _PositionState extends State<Position> {
         _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(4));
         _longitude =
             double.parse(currentLocation.longitude!.toStringAsFixed(4));
+        sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
       });
       sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
     });
+
+    // Get the Stream
+    Stream<DatabaseEvent> stream = _onroad.onValue;
+
+    // Subscribe to the stream!
+    stream.listen((DatabaseEvent event) {
+      final data = event.snapshot.value as Map;
+      onRoadVehicles = [];
+      data.forEach((key, value) {
+        onRoadVehicles.add({...value, 'vehicleId': key});
+
+      });
+    });
+
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
     userAccelerometerEvents.listen((UserAccelerometerEvent event) {
       setState(() {
@@ -248,7 +261,7 @@ class _PositionState extends State<Position> {
                   child: Text(value),
                 );
               }).toList(),
-            ),
+            )
           ],
         )));
   }
