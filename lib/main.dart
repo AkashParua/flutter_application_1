@@ -32,30 +32,31 @@ class Position extends StatefulWidget {
 }
 
 class _PositionState extends State<Position> {
-  double _latitude = 0.0;
-  double _longitude = 0.0;
-  double _accx = 0.0;
-  double _accy = 0.0;
+  /*Various state value */
+  double _latitude = 0.0;   //langitude and latitude of the device 
+  double _longitude = 0.0;   
+  double _accx = 0.0;    //acc in x , y and z direction
+  double _accy = 0.0;    
   double _accz = 0.0;
   double _gyx = 0.0;
   double _gyy = 0.0;
   double _gyz = 0.0;
   double _speed = 0.0;
-  String _deviceId = "";
-  bool _isPanick = false;
-  double radius = 10000; // Radius in meters
+  String _deviceId = "";  //unique device id correspoding to each vehicle 
+  bool _isPanick = false;  //state of the device whether in any accident or not 
+  double radius = 10000; // Radius in meters within which each hospital will be notified
 
   final Location _location = Location();
   final _geo = Geoflutterfire();
 
   late StreamSubscription<LocationData> _locationSubscription;
-  // final _fstore = FirebaseFirestore.instance.collection('locations');
+  //the realtime databse tracking all vehicles on road 
   final _onroad = FirebaseDatabase.instance.ref().child('onroad');
 
+/*Firebase function to send realtime data to the realtime database  */
   void sendLocation(String deviceId, double longitude, double latitude,
       double speed, String type) async {
     final geofirepoint = _geo.point(latitude: latitude, longitude: longitude);
-    // _fstore.add({'deviceid': deviceId, 'position': geofirepoint.data});
     _onroad.child(deviceId).set({
       'latitude': latitude,
       'longitude': longitude,
@@ -89,6 +90,7 @@ class _PositionState extends State<Position> {
   }
 
 */
+//Dropdown menu items 
   List<String> list = <String>['Car', 'Truck', 'Medical', 'Motorcycle'];
   String _vehicletype = 'Car';
   void erase(String deviceId) async {
@@ -97,6 +99,7 @@ class _PositionState extends State<Position> {
 
   List<Map<String, dynamic>> onRoadVehicles = [];
 
+//function to get the device id and set it as state 
   void getDeviceId() async {
     final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
@@ -118,6 +121,7 @@ class _PositionState extends State<Position> {
   void initState() {
     super.initState();
     getDeviceId();
+    //code below was used to add entires to the firestore databse no longer in use 
 /*
     final geofirepoint1 =
         _geo.point(latitude: 22.973936212313525, longitude: 88.45203683205422);
@@ -143,6 +147,7 @@ class _PositionState extends State<Position> {
       'name': 'Pasupatinath Hospital'
     });
 */
+//realtime tracking of location
     _locationSubscription =
         _location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
@@ -173,12 +178,13 @@ class _PositionState extends State<Position> {
       });
     });
   }
-
+//UI elements 
   final style1 = const TextStyle(
       fontWeight: FontWeight.bold, color: Colors.black, fontSize: 12);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _isPanick? Colors.red : Colors.green,
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(
@@ -306,7 +312,7 @@ class _PositionState extends State<Position> {
             TextButton(
               style: ButtonStyle(
                 foregroundColor:
-                    MaterialStateProperty.all<Color>(Colors.redAccent),
+                    MaterialStateProperty.all<Color>(Colors.deepPurple),
                    // backgroundColor: _isPanick ? Colors.red : Colors.green 
               ),
               onPressed: () {
