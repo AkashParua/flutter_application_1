@@ -1,12 +1,13 @@
 import 'dart:async';
-//import 'dart:convert';
+//import 'dart:math';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 // ignore: depend_on_referenced_packages
 //import 'package:rxdart/rxdart.dart';
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -41,8 +42,12 @@ class _PositionState extends State<Position> {
   double _gyz = 0.0;
   double _speed = 0.0;
   String _deviceId = "";
+  bool _isPanick = false;
+  double radius = 10000; // Radius in meters
+
   final Location _location = Location();
   final _geo = Geoflutterfire();
+
   late StreamSubscription<LocationData> _locationSubscription;
   // final _fstore = FirebaseFirestore.instance.collection('locations');
   final _onroad = FirebaseDatabase.instance.ref().child('onroad');
@@ -60,6 +65,30 @@ class _PositionState extends State<Position> {
     });
   }
 
+  final fstore = FirebaseFirestore.instance.collection('hospitals');
+
+//not implemented for test purpose
+/*
+  bool panickstatus(
+      double ax, double ay, double az, double vx, double vy, double vz) {
+    double totalAcc = sqrt(ax * ax + ay * ay + az * az);
+    /*More sofisticated algorithm using Kalman Filter can be applied to reduce noise 
+    to this for accident detection along with gyroscopic data to detect rollover  */
+    return totalAcc >
+        50; //if the total acceleration is greater than 50 i.e 5g , panic mode is triggered
+  }
+
+
+/*Stall status is triggered whenever there the car speed and acceleration are low*/
+  bool stallstatus(
+      double ax, double ay, double az, double vx, double vy, double vz) {
+    double totalAcc = sqrt(ax * ax + ay * ay + az * az);
+    double totalVelocity = sqrt(vx * vx + vy * vy + vz * vz);
+    if (totalVelocity < 1.39 && totalAcc < 1) return true;
+    return false;
+  }
+
+*/
   List<String> list = <String>['Car', 'Truck', 'Medical', 'Motorcycle'];
   String _vehicletype = 'Car';
   void erase(String deviceId) async {
@@ -89,29 +118,41 @@ class _PositionState extends State<Position> {
   void initState() {
     super.initState();
     getDeviceId();
+/*
+    final geofirepoint1 =
+        _geo.point(latitude: 22.973936212313525, longitude: 88.45203683205422);
+    fstore.add({
+      'position': geofirepoint1.data,
+      'gmail': 'akashparua999@gmail.com',
+      'name': 'Kalyani ESI Hospital'
+    });
+
+    final geofirepoint2 =
+        _geo.point(latitude: 22.979003254703244, longitude: 88.45770142178989);
+    fstore.add({
+      'position': geofirepoint2.data,
+      'gmail': 'akashparua@gmail.com',
+      'name': 'Kalyani General Hospital'
+    });
+
+    final geofirepoint3 =
+        _geo.point(latitude: 22.976632638455538, longitude: 88.45890305142603);
+    fstore.add({
+      'position': geofirepoint3.data,
+      'gmail': 'akashparua999@gmail.com',
+      'name': 'Pasupatinath Hospital'
+    });
+*/
     _locationSubscription =
         _location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
         _speed = double.parse(currentLocation.speed!.toStringAsFixed(3));
-        _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(4));
+        _latitude = double.parse(currentLocation.latitude!.toStringAsFixed(5));
         _longitude =
-            double.parse(currentLocation.longitude!.toStringAsFixed(4));
+            double.parse(currentLocation.longitude!.toStringAsFixed(5));
         sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
       });
       sendLocation(_deviceId, _longitude, _latitude, _speed, _vehicletype);
-    });
-
-    // Get the Stream
-    Stream<DatabaseEvent> stream = _onroad.onValue;
-
-    // Subscribe to the stream!
-    stream.listen((DatabaseEvent event) {
-      final data = event.snapshot.value as Map;
-      onRoadVehicles = [];
-      data.forEach((key, value) {
-        onRoadVehicles.add({...value, 'vehicleId': key});
-
-      });
     });
 
     // [UserAccelerometerEvent (x: 0.0, y: 0.0, z: 0.0)]
@@ -261,6 +302,46 @@ class _PositionState extends State<Position> {
                   child: Text(value),
                 );
               }).toList(),
+            ),
+            TextButton(
+              style: ButtonStyle(
+                foregroundColor:
+                    MaterialStateProperty.all<Color>(Colors.redAccent),
+                   // backgroundColor: _isPanick ? Colors.red : Colors.green 
+              ),
+              onPressed: () {
+                //toggles the values of is_Panick
+                setState(() {
+                  _isPanick = !_isPanick;
+                });
+                //send message to nearby hospital
+                if (_isPanick == true) {
+                  final currentpos =
+                      _geo.point(latitude: _latitude, longitude: _longitude);
+                  Stream<List<DocumentSnapshot>> stream = _geo
+                      .collection(collectionRef: fstore)
+                      .within(
+                          center: currentpos,
+                          radius: radius,
+                          field: 'position');
+
+                  stream.listen((List<DocumentSnapshot> documentList) {
+                    for (DocumentSnapshot document in documentList) {
+                      String email = document['gmail'];
+                      //print(email);
+                      final Email sendEmail = Email(
+                        body:
+                            'https://www.google.com/maps/search/?api=1&query=$_latitude,$_longitude',
+                        subject: 'Emergency Send Help',
+                        recipients: [email],
+                        isHTML: false,
+                      );
+                      FlutterEmailSender.send(sendEmail);
+                    }
+                  });
+                }
+              },
+              child: const Text('Panick'),
             )
           ],
         )));

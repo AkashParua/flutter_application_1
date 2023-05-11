@@ -46,6 +46,7 @@ dependencies:
   firebase_messaging: ^13.0.4
   cloud_firestore: ^3.5.1
   rxdart: ^0.27.7
+  flutter_email_sender: ^5.2.0
   
 
 dev_dependencies:
